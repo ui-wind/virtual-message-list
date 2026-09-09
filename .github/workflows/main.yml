@@ -1,0 +1,108 @@
+name: Release
+
+on:
+  push:
+    branches:
+      - main
+
+permissions: {}
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+jobs:
+  release:
+    name: Release
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write # Update release commits/tags and publish packages with trusted publishing.
+      pull-requests: write # Create or update the Changesets release pull request.
+      id-token: write # Request the npm OIDC token for trusted publishing.
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@0e279bb959325dab635dd2c09392533439d90093 # v6.0.8
+        with:
+          version: 10.24.0
+
+      - name: Setup Node
+        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6
+        with:
+          node-version: 24.18.0
+          cache: pnpm
+          registry-url: https://registry.npmjs.org
+
+      - name: Upgrade npm for OIDC trusted publishing
+        run: npm install -g npm@12.0.2
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Get Playwright version
+        id: playwright-version
+        run: echo "version=$(pnpm --filter react-virtuoso exec playwright --version | head -1)" >> $GITHUB_OUTPUT
+
+      - name: Cache Playwright browsers
+        uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ steps.playwright-version.outputs.version }}
+
+      - name: Run CI checks
+        run: pnpm run ci
+        env:
+          PADDLE_ENVIRONMENT: sandbox
+          PADDLE_TOKEN: test_5
+          PADDLE_STANDARD_PRICE_ID: pri_01
+          PADDLE_PRO_PRICE_ID: pri_01
+
+      - name: Check for major changesets
+        id: major
+        run: |
+          if grep -r "^major" .changeset/*.md 2>/dev/null; then
+            echo "found=true" >> $GITHUB_OUTPUT
+          else
+            echo "found=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Create Release Pull Request or Publish
+        id: changesets
+        uses: changesets/action@a45c4d594aa4e2c509dc14a9f2b3b67ba3780d0d # v1.9.0
+        with:
+          version: pnpm changeset-version
+          publish: pnpm release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          npm_config_force: 'true'
+          PADDLE_ENVIRONMENT: sandbox
+          PADDLE_TOKEN: test_5
+          PADDLE_STANDARD_PRICE_ID: pri_01
+          PADDLE_PRO_PRICE_ID: pri_01
+
+      - name: Auto-merge non-major version PR
+        if: steps.changesets.outputs.hasChangesets == 'true' && steps.changesets.outputs.pullRequestNumber != '' && steps.major.outputs.found == 'false'
+        env:
+          GITHUB_TOKEN: ${{ secrets.PAT_TOKEN }}
+          PULL_REQUEST_NUMBER: ${{ steps.changesets.outputs.pullRequestNumber }}
+        run: |
+          case "$PULL_REQUEST_NUMBER" in
+            ''|*[!0-9]*) echo "Invalid pull request number: $PULL_REQUEST_NUMBER"; exit 1 ;;
+          esac
+          if ! gh pr merge --squash --auto "$PULL_REQUEST_NUMBER"; then
+            echo "::warning title=Release PR not auto-merged::Could not enable auto-merge for pull request #$PULL_REQUEST_NUMBER. Merge it manually or enable repository auto-merge."
+          fi
+
+      - name: Upload Playwright report
+        if: failure()
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
+        with:
+          name: playwright-report-release
+          path: packages/react-virtuoso/playwright-report/
+          retention-days: 7

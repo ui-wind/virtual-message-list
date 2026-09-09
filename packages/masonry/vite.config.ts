@@ -1,0 +1,43 @@
+import { resolve } from 'node:path'
+
+import react from '@vitejs/plugin-react'
+import dts from 'vite-plugin-dts'
+import { defineConfig } from 'vitest/config'
+
+const inLadle = process.env.LADLE === 'true'
+
+const define = {
+  PACKAGE_TIMESTAMP: Date.now(),
+}
+// https://vitejs.dev/config/
+export default inLadle
+  ? defineConfig({
+      define,
+    })
+  : defineConfig({
+      build: {
+        target: 'es2022',
+        lib: {
+          entry: resolve(import.meta.dirname, 'src/index.ts'),
+          fileName: 'index',
+          formats: ['es'],
+          name: 'Virtuoso',
+        },
+        minify: true,
+        rollupOptions: {
+          external: ['react', 'react/jsx-runtime', 'react/jsx-dev-runtime', '@virtuoso.dev/gurx', '@ladle/react'],
+          output: {
+            exports: 'named',
+          },
+        },
+      },
+      define,
+      plugins: [
+        react(),
+        dts({
+          compilerOptions: { skipLibCheck: true },
+          rollupTypes: true,
+          staticImport: true,
+        }),
+      ],
+    })

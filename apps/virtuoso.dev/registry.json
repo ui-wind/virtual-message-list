@@ -1,0 +1,140 @@
+{
+  "$schema": "https://ui.shadcn.com/schema/registry.json",
+  "name": "virtuoso",
+  "homepage": "https://virtuoso.dev",
+  "items": [
+    {
+      "name": "data-table",
+      "type": "registry:component",
+      "title": "Data Table",
+      "description": "A virtualized data table with row and column virtualization.",
+      "dependencies": ["@virtuoso.dev/data-table"],
+      "files": [
+        {
+          "path": "registry/new-york/data-table/data-table.tsx",
+          "type": "registry:component",
+          "target": "@ui/data-table/index.tsx"
+        }
+      ]
+    },
+    {
+      "name": "data-table-draggable-group-header",
+      "type": "registry:component",
+      "title": "Data Table Draggable Group Header",
+      "description": "Drag-to-reorder column group header that moves an entire group of columns at once.",
+      "dependencies": ["@virtuoso.dev/data-table"],
+      "registryDependencies": [
+        "petyosi/react-virtuoso/data-table",
+        "petyosi/react-virtuoso/data-table-reorder-grip",
+        "petyosi/react-virtuoso/data-table-reorder-drop-zone"
+      ],
+      "files": [
+        {
+          "path": "registry/new-york/data-table/column-reorder/draggable-group-header.tsx",
+          "type": "registry:component",
+          "target": "@ui/data-table/column-reorder/draggable-group-header.tsx"
+        }
+      ]
+    },
+    {
+      "name": "data-table-reorder-grip",
+      "type": "registry:component",
+      "title": "Data Table Reorder Grip",
+      "description": "Slot-mounted drag grip for column reordering.",
+      "dependencies": ["@virtuoso.dev/data-table", "lucide-react"],
+      "registryDependencies": ["petyosi/react-virtuoso/data-table"],
+      "files": [
+        {
+          "path": "registry/new-york/data-table/column-reorder/index.ts",
+          "type": "registry:component",
+          "target": "@ui/data-table/column-reorder/index.ts"
+        },
+        {
+          "path": "registry/new-york/data-table/column-reorder/draggable-group-header.tsx",
+          "type": "registry:component",
+          "target": "@ui/data-table/column-reorder/draggable-group-header.tsx"
+        },
+        {
+          "path": "registry/new-york/data-table/column-reorder/reorder-drop-zone.tsx",
+          "type": "registry:component",
+          "target": "@ui/data-table/column-reorder/reorder-drop-zone.tsx"
+        },
+        {
+          "path": "registry/new-york/data-table/column-reorder/reorder-grip.tsx",
+          "type": "registry:component",
+          "target": "@ui/data-table/column-reorder/reorder-grip.tsx"
+        }
+      ]
+    },
+    {
+      "name": "data-table-reorder-drop-zone",
+      "type": "registry:component",
+      "title": "Data Table Reorder Drop Zone",
+      "description": "Slot-mounted drop zone and indicator for column reordering.",
+      "dependencies": ["@virtuoso.dev/data-table", "lucide-react"],
+      "registryDependencies": ["petyosi/react-virtuoso/data-table"],
+      "files": [
+        {
+          "path": "registry/new-york/data-table/column-reorder/index.ts",
+          "type": "registry:component",
+          "target": "@ui/data-table/column-reorder/index.ts"
+        },
+        {
+          "path": "registry/new-york/data-table/column-reorder/draggable-group-header.tsx",
+          "type": "registry:component",
+          "target": "@ui/data-table/column-reorder/draggable-group-header.tsx"
+        },
+        {
+          "path": "registry/new-york/data-table/column-reorder/reorder-grip.tsx",
+          "type": "registry:component",
+          "target": "@ui/data-table/column-reorder/reorder-grip.tsx"
+        },
+        {
+          "path": "registry/new-york/data-table/column-reorder/reorder-drop-zone.tsx",
+          "type": "registry:component",
+          "target": "@ui/data-table/column-reorder/reorder-drop-zone.tsx"
+        }
+      ]
+    },
+    {
+      "name": "data-table-resize-handle",
+      "type": "registry:component",
+      "title": "Data Table Resize Handle",
+      "description": "Slot-mounted resize handle for column headers.",
+      "dependencies": ["@virtuoso.dev/data-table"],
+      "registryDependencies": ["petyosi/react-virtuoso/data-table"],
+      "files": [
+        {
+          "path": "registry/new-york/data-table/column-resize/index.ts",
+          "type": "registry:component",
+          "target": "@ui/data-table/column-resize/index.ts"
+        },
+        {
+          "path": "registry/new-york/data-table/column-resize/resize-handle.tsx",
+          "type": "registry:component",
+          "target": "@ui/data-table/column-resize/resize-handle.tsx"
+        }
+      ]
+    },
+    {
+      "name": "data-table-sort-header-button",
+      "type": "registry:component",
+      "title": "Data Table Sort Header Button",
+      "description": "Slot-mounted sort button for column headers.",
+      "dependencies": ["@virtuoso.dev/data-table", "lucide-react"],
+      "registryDependencies": ["petyosi/react-virtuoso/data-table"],
+      "files": [
+        {
+          "path": "registry/new-york/data-table/column-sort/index.ts",
+          "type": "registry:component",
+          "target": "@ui/data-table/column-sort/index.ts"
+        },
+        {
+          "path": "registry/new-york/data-table/column-sort/sort-header-button.tsx",
+          "type": "registry:component",
+          "target": "@ui/data-table/column-sort/sort-header-button.tsx"
+        }
+      ]
+    }
+  ]
+}

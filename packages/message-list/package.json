@@ -1,0 +1,65 @@
+{
+  "name": "virtual-message-list",
+  "version": "0.1.0",
+  "description": "Virtualized message list with controlled and imperative data APIs, built on gurx",
+  "author": "ui-wind",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ui-wind/virtual-message-list.git",
+    "directory": "packages/message-list"
+  },
+  "source": "src/index.ts",
+  "files": ["dist"],
+  "sideEffects": false,
+  "main": "dist/index.cjs",
+  "module": "dist/index.mjs",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.mjs",
+      "require": "./dist/index.cjs",
+      "default": "./dist/index.mjs"
+    }
+  },
+  "publishConfig": {
+    "access": "public",
+    "provenance": true
+  },
+  "scripts": {
+    "dev": "vite build",
+    "build": "vite build",
+    "test": "vitest run",
+    "test:watch": "vitest watch",
+    "e2e": "playwright test --workers=1",
+    "lint": "oxlint --type-aware --type-check",
+    "typecheck": "tsgo --noEmit",
+    "format": "oxfmt",
+    "format:check": "oxfmt --check",
+    "ladle": "LADLE=true ladle serve",
+    "ci-setup": "npx playwright install --with-deps chromium"
+  },
+  "dependencies": {
+    "@virtuoso.dev/gurx": "workspace:*"
+  },
+  "devDependencies": {
+    "@ladle/react": "catalog:",
+    "@playwright/test": "^1.60.0",
+    "@testing-library/react": "catalog:",
+    "@types/react": "catalog:",
+    "@types/react-dom": "catalog:",
+    "@vitejs/plugin-react": "catalog:",
+    "jsdom": "catalog:",
+    "playwright": "catalog:",
+    "react": "catalog:",
+    "react-dom": "catalog:",
+    "typescript": "catalog:",
+    "vite": "catalog:",
+    "vite-plugin-dts": "catalog:",
+    "vitest": "catalog:"
+  },
+  "peerDependencies": {
+    "react": ">=16 || >=17 || >=18 || >=19",
+    "react-dom": ">=16 || >=17 || >=18 || >=19"
+  }
+}

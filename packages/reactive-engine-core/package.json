@@ -1,0 +1,48 @@
+{
+  "name": "@virtuoso.dev/reactive-engine-core",
+  "version": "0.1.2",
+  "private": false,
+  "description": "Framework-agnostic reactive state engine built on a graph of typed nodes.",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/petyosi/react-virtuoso.git",
+    "directory": "packages/reactive-engine-core"
+  },
+  "files": [
+    "dist"
+  ],
+  "type": "module",
+  "sideEffects": false,
+  "main": "dist/index.js",
+  "module": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "publishConfig": {
+    "access": "public",
+    "provenance": true
+  },
+  "scripts": {
+    "build": "tsc && vite build",
+    "test": "vitest --run --passWithNoTests",
+    "lint": "oxlint --type-aware --type-check",
+    "typecheck": "tsgo --noEmit",
+    "format": "oxfmt",
+    "format:check": "oxfmt --check"
+  },
+  "dependencies": {
+    "tiny-invariant": "catalog:"
+  },
+  "devDependencies": {
+    "@types/node": "catalog:",
+    "typescript": "catalog:",
+    "vite": "catalog:",
+    "vite-plugin-dts": "catalog:",
+    "vitest": "catalog:"
+  }
+}

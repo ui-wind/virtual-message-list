@@ -1,0 +1,37 @@
+{
+  "pre-commit": {
+    "parallel": true,
+    "commands": {
+      "markdown-lint": {
+        "glob": "**/*.md",
+        "run": "pnpm exec markdownlint --ignore-path .markdownlintignore {staged_files}",
+        "stage_fixed": true,
+        "skip": ["merge", "rebase"]
+      },
+      "oxlint": {
+        "glob": "*.{js,mjs,cjs,ts,jsx,tsx,astro}",
+        "run": "pnpm lint",
+        "skip": ["merge", "rebase"]
+      },
+      "format-oxfmt": {
+        "glob": "*.{js,mjs,cjs,ts,jsx,tsx}",
+        "run": "pnpm exec oxfmt --write {staged_files}",
+        "stage_fixed": true,
+        "skip": ["merge", "rebase"]
+      },
+      "format-astro": {
+        "root": "apps/virtuoso.dev/",
+        "glob": "apps/virtuoso.dev/**/*.astro",
+        "run": "pnpm exec prettier --write {staged_files}",
+        "stage_fixed": true,
+        "skip": ["merge", "rebase"]
+      },
+      "validate-skill-manifests": {
+        "glob": "{.claude-plugin/marketplace.json,.agents/plugins/marketplace.json,packages/virtuoso-skills/.claude-plugin/plugin.json,plugins/virtuoso-skills/.codex-plugin/plugin.json}",
+        "run": "node -e \"for (const f of process.argv.slice(1)) JSON.parse(require('fs').readFileSync(f, 'utf8'))\" -- {staged_files}",
+        "stage_fixed": false,
+        "skip": ["merge", "rebase"]
+      }
+    }
+  }
+}

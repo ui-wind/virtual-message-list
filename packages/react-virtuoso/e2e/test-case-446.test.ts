@@ -1,0 +1,19 @@
+import { expect, test } from '@playwright/test'
+
+import { navigateToExample } from './utils.ts'
+
+test.describe('list with a long last item', () => {
+  test.beforeEach(async ({ baseURL, page }) => {
+    await navigateToExample(page, baseURL, 'test-case-446')
+    await page.waitForTimeout(300)
+  })
+
+  // the float height was causing a load of item 9
+  test('starts from item with index 10', async ({ page }) => {
+    const firstItemIndex = await page.evaluate(() => {
+      const listContainer = document.querySelector('[data-testid=virtuoso-item-list]')!
+      return ((listContainer as HTMLElement).firstElementChild as HTMLElement).dataset.itemIndex
+    })
+    expect(firstItemIndex).toBe('10')
+  })
+})

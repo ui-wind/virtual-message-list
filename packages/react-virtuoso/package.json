@@ -1,0 +1,87 @@
+{
+  "name": "react-virtuoso",
+  "version": "4.18.13",
+  "description": "A virtual scroll React component for efficiently rendering large scrollable lists, grids, tables, and feeds",
+  "keywords": [
+    "chat",
+    "endless",
+    "feed",
+    "grid",
+    "infinite",
+    "list",
+    "load more",
+    "react",
+    "reactjs",
+    "scrolling",
+    "virtual",
+    "virtualized"
+  ],
+  "homepage": "https://virtuoso.dev/",
+  "license": "MIT",
+  "author": "Petyo Ivanov",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/petyosi/react-virtuoso.git",
+    "directory": "packages/react-virtuoso"
+  },
+  "source": "src/index.tsx",
+  "files": [
+    "dist"
+  ],
+  "sideEffects": false,
+  "main": "dist/index.cjs",
+  "module": "dist/index.mjs",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.mjs",
+      "require": "./dist/index.cjs",
+      "default": "./dist/index.mjs"
+    }
+  },
+  "publishConfig": {
+    "provenance": true
+  },
+  "scripts": {
+    "dev": "vite build",
+    "build": "vite build",
+    "test": "vitest run",
+    "test:watch": "vitest watch",
+    "e2e": "playwright test --workers=1",
+    "lint": "oxlint --type-aware --type-check",
+    "typecheck": "tsgo --noEmit",
+    "format": "oxfmt",
+    "format:check": "oxfmt --check",
+    "ladle": "LADLE=true ladle serve",
+    "ci-setup": "npx playwright install --with-deps chromium"
+  },
+  "devDependencies": {
+    "@emotion/styled": "^11.10.8",
+    "@faker-js/faker": "^7.6.0",
+    "@ladle/react": "catalog:",
+    "@microsoft/api-extractor": "catalog:",
+    "@playwright/test": "^1.60.0",
+    "@testing-library/react": "catalog:",
+    "@types/jsdom": "^21.1.1",
+    "@types/lodash": "^4.14.194",
+    "@types/react": "catalog:",
+    "@types/react-dom": "catalog:",
+    "@vitejs/plugin-react": "catalog:",
+    "jsdom": "catalog:",
+    "lodash": "^4.17.21",
+    "playwright": "catalog:",
+    "react": "catalog:",
+    "react-dom": "catalog:",
+    "react-router-dom": "^6.14.0",
+    "typescript": "catalog:",
+    "uuid": "^11.1.0",
+    "vite": "catalog:",
+    "vite-plugin-dts": "catalog:",
+    "vitest": "catalog:"
+  },
+  "peerDependencies": {
+    "react": ">=16 || >=17 || >= 18 || >= 19",
+    "react-dom": ">=16 || >=17 || >= 18 || >=19"
+  }
+}
