@@ -88,6 +88,7 @@ export function connectSmoothScrollSystem(realm: Realm): void {
   // until the layout settles or the user scrolls away from the bottom.
   let pendingBottom: ScrollToLocationRequest | null = null
   let settleTimer: ReturnType<typeof setTimeout> | null = null
+  let reAnchorRaf: number | null = null
   let settling = false
 
   const clearPendingBottom = () => {
@@ -95,6 +96,10 @@ export function connectSmoothScrollSystem(realm: Realm): void {
     if (settleTimer !== null) {
       clearTimeout(settleTimer)
       settleTimer = null
+    }
+    if (reAnchorRaf !== null) {
+      cancelAnimationFrame(reAnchorRaf)
+      reAnchorRaf = null
     }
   }
 
@@ -231,16 +236,25 @@ export function connectSmoothScrollSystem(realm: Realm): void {
   // Measured item sizes arrive asynchronously (ResizeObserver) after the flush, so
   // this is what actually scrolls a list that has just transitioned to overflowing.
   const reAnchor = () => {
-    if (!pendingBottom || settling) {
+    if (!pendingBottom) {
       return
     }
-    settling = true
-    try {
-      perform({ ...pendingBottom, isBottom: pendingBottom.isBottom ?? true }, false)
-      armSettleTimer()
-    } finally {
-      settling = false
+    if (reAnchorRaf !== null) {
+      cancelAnimationFrame(reAnchorRaf)
     }
+    reAnchorRaf = requestAnimationFrame(() => {
+      reAnchorRaf = null
+      if (!pendingBottom || settling) {
+        return
+      }
+      settling = true
+      try {
+        perform({ ...pendingBottom, isBottom: pendingBottom.isBottom ?? true }, false)
+        armSettleTimer()
+      } finally {
+        settling = false
+      }
+    })
   }
 
   realm.sub(setSize$, reAnchor)
