@@ -9,10 +9,10 @@ import type { ScrollBehavior } from '../dataTypes'
  */
 
 /** The scrollable container element (`null` until mounted). */
-export const scrollerElement$ = Cell<HTMLElement | null>(null)
+export const scrollerElement$ = Cell<HTMLDivElement | null>(null)
 
 /** The inner list element that carries the total content height. */
-export const listElement$ = Cell<HTMLElement | null>(null)
+export const listElement$ = Cell<HTMLDivElement | null>(null)
 
 /** Whether the list scrolls with the window rather than an internal scroller. */
 export const useWindowScroll$ = Cell<boolean>(false)
@@ -32,7 +32,11 @@ export function resolveScrollContainer(
   scroller: HTMLElement | null,
   windowScroll: boolean
 ): HTMLElement | Window | null {
-  if (customParent) return customParent
-  if (windowScroll) return typeof window !== 'undefined' ? window : null
+  if (customParent) {
+    return customParent
+  }
+  if (windowScroll) {
+    return typeof window === 'undefined' ? null : window
+  }
   return scroller
 }

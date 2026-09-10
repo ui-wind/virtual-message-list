@@ -19,6 +19,9 @@ export type {
 } from './dataTypes'
 export { ScrollModifierOption } from './dataTypes'
 export { VirtuosoMessageList } from './components/virtuoso-message-list'
+export { VirtuosoMessageListLicense } from './components/license'
+export { VirtuosoMessageListTestingContext } from './components/testing-context'
+export { useCurrentlyRenderedData, useVirtuosoLocation, useVirtuosoMethods } from './hooks'
 export { scrollToBottomAlways, scrollToBottomIfAtBottom } from './utils/scroll-helpers'
 export type {
   ContextAwareComponent,

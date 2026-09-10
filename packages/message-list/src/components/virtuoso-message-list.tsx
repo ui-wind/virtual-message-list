@@ -2,19 +2,24 @@ import * as React from 'react'
 
 import { Realm } from '@virtuoso.dev/gurx'
 
-import { DEFAULT_ITEM_HEIGHT } from '../constants'
+import { applyControlledData, createDataMethods, createListMethods } from '../data-ops'
+import { MethodsProvider } from '../hooks'
 import { SystemProvider } from '../system-to-component'
-import { data$ } from '../systems/data-system'
-import { scrollerElement$ } from '../systems/dom-system'
-import { customScrollParent$, useWindowScroll$ } from '../systems/dom-system'
+import { connectAutoscrollSystem } from '../systems/autoscroll-system'
+import { context$ } from '../systems/config-system'
+import { connectDataSystem, data$, itemIdentity$ } from '../systems/data-system'
+import { customScrollParent$, scrollTop$, useWindowScroll$ } from '../systems/dom-system'
+import { visibleRange$ } from '../systems/range-system'
 import { listScrollLocation$ } from '../systems/scroll-location-system'
-import { itemCount$, defaultItemSize$ } from '../systems/size-system'
+import { defaultItemSize$, itemCount$, listHeight$, offsetTree$, resetSizes$ } from '../systems/size-system'
+import { connectSmoothScrollSystem, prependAnchor$, scrollToLocation$ } from '../systems/smooth-scroll-system'
 import { increaseViewportBy$ } from '../systems/viewport-system'
 import { ListRenderProvider } from './list-context'
 import { Scroller } from './scroller'
 
-import type { VirtuosoMessageListMethods } from '../dataTypes'
+import type { ScrollModifier, VirtuosoMessageListMethods } from '../dataTypes'
 import type { VirtuosoMessageListProps } from '../types'
+import type { ListRenderConfig } from './list-context'
 
 function VirtuosoMessageListInner<Data, Context>(
   props: VirtuosoMessageListProps<Data, Context>,
@@ -26,95 +31,221 @@ function VirtuosoMessageListInner<Data, Context>(
     computeItemKey,
     ItemContent,
     ScrollElement,
+    Header,
+    StickyHeader,
+    Footer,
+    StickyFooter,
+    EmptyPlaceholder,
+    HeaderWrapper,
+    StickyHeaderWrapper,
+    FooterWrapper,
+    StickyFooterWrapper,
     onRenderedDataChange,
+    onScroll,
+    initialLocation,
     increaseViewportBy,
     useWindowScroll: useWindowScrollProp,
     customScrollParent,
     data: controlledData,
+    itemIdentity,
+    shortSizeAlign,
+    enforceStickyFooterAtBottom,
     className,
     style,
     ...scrollerRest
-  } = props as VirtuosoMessageListProps<Data, Context> & Record<string, unknown>
+  } = props
 
   const realm = React.useMemo(() => {
-    const initData = (controlledData as { data?: Data[] | null } | null | undefined)?.data ?? initialData ?? []
-    const arr = (Array.isArray(initData) ? initData : []) as unknown[]
-    return new Realm({
-      [data$ as unknown as symbol]: arr,
-      [itemCount$ as unknown as symbol]: arr.length,
-      [defaultItemSize$ as unknown as symbol]: DEFAULT_ITEM_HEIGHT,
-      [increaseViewportBy$ as unknown as symbol]: increaseViewportBy ?? 0,
-      [useWindowScroll$ as unknown as symbol]: Boolean(useWindowScrollProp),
-      [customScrollParent$ as unknown as symbol]: (customScrollParent as HTMLElement | null) ?? null,
+    const raw = controlledData?.data ?? initialData ?? []
+    const arr: unknown[] = Array.isArray(raw) ? raw : []
+    // `itemIdentity` is `(item: Data) => unknown`; the realm cell erases Data to
+    // `unknown`. Data items always flow in as `unknown`, so the identity callback
+    // only ever receives values of the original Data type at runtime.
+    // oxlint-disable-next-line typescript-eslint(no-unsafe-type-assertion) -- generic boundary (Data identity → erased unknown)
+    const identity = (itemIdentity as ((item: unknown) => unknown) | undefined) ?? null
+    const r = new Realm({
+      [data$]: arr,
+      [increaseViewportBy$]: increaseViewportBy ?? 0,
+      [useWindowScroll$]: useWindowScrollProp === true,
+      [customScrollParent$]: customScrollParent ?? null,
+      [context$]: context,
+      [itemIdentity$]: identity,
     })
-  }, []) // eslint-disable-line react-hooks/exhaustive-deps -- one realm per mount
+    connectDataSystem(r, {
+      itemCount$,
+      resetSizes$,
+      scrollTop$,
+      defaultItemSize$,
+      prependAnchor$,
+    })
+    connectAutoscrollSystem(r)
+    connectSmoothScrollSystem(r)
+    return r
+    // oxlint-disable-next-line eslint-plugin-react-hooks(exhaustive-deps) -- one realm per mount
+  }, [])
 
   const updates = React.useMemo<Record<symbol, unknown>>(() => {
     const out: Record<symbol, unknown> = {}
-    if (controlledData !== undefined) {
-      const arr = (controlledData as { data?: Data[] | null } | null | undefined)?.data
-      const normalized = Array.isArray(arr) ? (arr as unknown[]) : []
-      out[data$ as unknown as symbol] = normalized
-      out[itemCount$ as unknown as symbol] = normalized.length
+    if (increaseViewportBy !== undefined) {
+      out[increaseViewportBy$] = increaseViewportBy
     }
-    if (increaseViewportBy !== undefined) out[increaseViewportBy$ as unknown as symbol] = increaseViewportBy
-    if (useWindowScrollProp !== undefined) out[useWindowScroll$ as unknown as symbol] = Boolean(useWindowScrollProp)
-    if (customScrollParent !== undefined) out[customScrollParent$ as unknown as symbol] = (customScrollParent as HTMLElement | null) ?? null
+    if (useWindowScrollProp !== undefined) {
+      out[useWindowScroll$] = useWindowScrollProp
+    }
+    if (customScrollParent !== undefined) {
+      out[customScrollParent$] = customScrollParent ?? null
+    }
+    out[context$] = context
+    // See the realm-construction note: Data identity is only ever invoked on
+    // values of the original Data type, so erasing to `unknown` is runtime-safe.
+    // oxlint-disable-next-line typescript-eslint(no-unsafe-type-assertion) -- generic boundary (Data identity → erased unknown)
+    out[itemIdentity$] = (itemIdentity as ((item: unknown) => unknown) | undefined) ?? null
     return out
-  }, [controlledData, increaseViewportBy, useWindowScrollProp, customScrollParent])
+  }, [increaseViewportBy, useWindowScrollProp, customScrollParent, context, itemIdentity])
 
+  const prevControlledRef = React.useRef<unknown[] | null>(null)
+  const initialControlledApplied = React.useRef(false)
+
+  React.useLayoutEffect(() => {
+    if (controlledData === undefined || controlledData === null) {
+      prevControlledRef.current = null
+      initialControlledApplied.current = false
+      return
+    }
+    const raw = controlledData.data
+    const nextData: unknown[] = Array.isArray(raw) ? raw : []
+    const modifier: ScrollModifier | undefined = controlledData.scrollModifier
+
+    if (!initialControlledApplied.current) {
+      const current: unknown[] = realm.getValue(data$)
+      const sameRef = current === nextData
+      const sameContent = !sameRef && current.length === nextData.length && current.every((v, i) => v === nextData[i])
+      initialControlledApplied.current = true
+      prevControlledRef.current = [...nextData]
+      if (sameRef || sameContent) {
+        return
+      }
+    }
+
+    const prevData = prevControlledRef.current
+    if (prevData !== null) {
+      const sameRef = prevData === nextData
+      const sameContent = !sameRef && prevData.length === nextData.length && prevData.every((v, i) => v === nextData[i])
+      if (sameRef || sameContent) {
+        return
+      }
+      applyControlledData(realm, prevData, nextData, modifier)
+    }
+    prevControlledRef.current = [...nextData]
+  }, [controlledData, realm])
+
+  React.useEffect(() => {
+    if (!onScroll) {
+      return
+    }
+    return realm.sub(listScrollLocation$, (location) => {
+      onScroll(location)
+    })
+  }, [realm, onScroll])
+
+  React.useEffect(() => {
+    if (initialLocation === undefined) {
+      return
+    }
+    realm.pub(scrollToLocation$, { location: initialLocation })
+  }, [realm, initialLocation])
+
+  // gurx constructor-seeded values never trigger a recomputation cycle, so
+  // `itemCount$` cannot live in the realm constructor above: the layout
+  // `combine` chain (`offsetTree$`/`listHeight$`/`visibleRange$`/
+  // `listScrollLocation$`) would never fire and only a single row would render.
+  // Publish it in a mount effect AFTER the subscription effects above (and after
+  // React has registered the child `useCellValues` cells), so the initial layout
+  // is computed and `onScroll` observes the resulting location emission.
+  React.useEffect(() => {
+    const count: number = Array.isArray(controlledData?.data ?? initialData ?? []) ? (controlledData?.data ?? initialData ?? []).length : 0
+    realm.getValue(visibleRange$)
+    realm.getValue(offsetTree$)
+    realm.getValue(listHeight$)
+    realm.getValue(listScrollLocation$)
+    realm.pub(itemCount$, count)
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- mount-only; data flow is handled by the controlled-data effect
+  }, [realm])
+
+  const dataMethods = React.useMemo(() => createDataMethods(realm), [realm])
+  const methods = React.useMemo(() => createListMethods(realm, dataMethods), [realm, dataMethods])
+
+  // `VirtuosoMessageListInner` is generic in Data/Context but `useImperativeHandle`'s
+  // ref param is bivariant in those generics; the runtime value is always created
+  // for the same Data/Context the caller supplied via props.
   React.useImperativeHandle(
+    // oxlint-disable-next-line typescript-eslint(no-unsafe-type-assertion) -- generic forwardRef boundary
     ref as React.ForwardedRef<VirtuosoMessageListMethods<unknown, unknown>>,
-    () => ({
-      data: {
-        prepend: () => {},
-        append: () => {},
-        map: () => {},
-        mapWithAnchor: () => {},
-        findAndDelete: () => {},
-        findIndex: () => -1,
-        find: () => undefined,
-        replace: () => {},
-        insert: () => {},
-        deleteRange: () => {},
-        batch: (cb: () => void) => cb(),
-        get: () => [...(realm.getValue(data$ as unknown as import('@virtuoso.dev/gurx').NodeRef<unknown[]>) as unknown[])],
-        getCurrentlyRendered: () => [],
-        removeFromStart: () => {},
-      } as unknown as import('../dataTypes').DataMethods<unknown, unknown>,
-      scrollToItem: () => {},
-      scrollIntoView: () => {},
-      scrollerElement: () =>
-        realm.getValue(scrollerElement$ as unknown as import('@virtuoso.dev/gurx').NodeRef<HTMLElement | null>) as HTMLDivElement | null,
-      getScrollLocation: () => realm.getValue(listScrollLocation$),
-      cancelSmoothScroll: () => {},
-      notifyItemsChanged: () => {},
-      height: () => 0,
-    }),
-    [realm]
+    () =>
+      // Same erasure: `methods` is typed `unknown, unknown` but at runtime it carries
+      // the caller's Data/Context.
+      // oxlint-disable-next-line typescript-eslint(no-unsafe-type-assertion) -- generic forwardRef boundary
+      methods as unknown as VirtuosoMessageListMethods<unknown, unknown>,
+    [methods]
   )
 
-  const renderConfig = React.useMemo(
+  const renderConfig: ListRenderConfig<Data, Context> = React.useMemo(
     () => ({
-      context: context as Context,
-      ItemContent: ItemContent as VirtuosoMessageListProps<Data, Context>['ItemContent'],
-      computeItemKey: computeItemKey as VirtuosoMessageListProps<Data, Context>['computeItemKey'],
-      onRenderedDataChange: onRenderedDataChange as VirtuosoMessageListProps<Data, Context>['onRenderedDataChange'],
-      ScrollElement: ScrollElement as VirtuosoMessageListProps<Data, Context>['ScrollElement'],
+      context,
+      ItemContent,
+      computeItemKey,
+      onRenderedDataChange,
+      ScrollElement,
+      Header,
+      StickyHeader,
+      Footer,
+      StickyFooter,
+      EmptyPlaceholder,
+      HeaderWrapper,
+      StickyHeaderWrapper,
+      FooterWrapper,
+      StickyFooterWrapper,
+      shortSizeAlign,
+      enforceStickyFooterAtBottom,
       scrollerProps: { className, style, ...scrollerRest } as Record<string, unknown>,
     }),
-    [context, ItemContent, computeItemKey, onRenderedDataChange, ScrollElement, className, style, scrollerRest]
+    [
+      context,
+      ItemContent,
+      computeItemKey,
+      onRenderedDataChange,
+      ScrollElement,
+      Header,
+      StickyHeader,
+      Footer,
+      StickyFooter,
+      EmptyPlaceholder,
+      HeaderWrapper,
+      StickyHeaderWrapper,
+      FooterWrapper,
+      StickyFooterWrapper,
+      shortSizeAlign,
+      enforceStickyFooterAtBottom,
+      className,
+      style,
+      scrollerRest,
+    ]
   )
 
   return (
     <SystemProvider realm={realm} updates={updates}>
-      <ListRenderProvider value={renderConfig as never}>
-        <Scroller />
+      <ListRenderProvider value={renderConfig}>
+        <MethodsProvider methods={methods}>
+          <Scroller />
+        </MethodsProvider>
       </ListRenderProvider>
     </SystemProvider>
   )
 }
 
+// `React.forwardRef` is bivariant-typed as `ForwardedRef<unknown>`; re-casting to
+// the public generic API is the standard pattern (react-virtuoso does the same).
+// oxlint-disable-next-line typescript-eslint(no-unsafe-type-assertion) -- public-API generic forwardRef pattern
 export const VirtuosoMessageList = React.forwardRef(VirtuosoMessageListInner) as <Data, Context = unknown>(
   props: VirtuosoMessageListProps<Data, Context> & { ref?: React.Ref<VirtuosoMessageListMethods<Data, Context>> }
 ) => React.ReactElement | null

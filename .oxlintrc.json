@@ -107,5 +107,5 @@
       }
     }
   ],
-  "ignorePatterns": ["node_modules/", "dist/", "test-results"]
+  "ignorePatterns": ["node_modules/", "dist/", "test-results", "build-example/", "build-example"]
 }

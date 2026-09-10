@@ -1,6 +1,6 @@
 import type { ComponentType, CSSProperties, HTMLProps, ReactNode, RefAttributes } from 'react'
 
-import type { DataWithScrollModifier, ItemLocation } from './dataTypes'
+import type { DataWithScrollModifier, ItemLocation, ListScrollLocation } from './dataTypes'
 
 // ---------------------------------------------------------------------------
 // Slot component types
@@ -59,7 +59,7 @@ export interface VirtuosoMessageListProps<Data, Context> extends ScrollerProps {
   StickyFooter?: ContextAwareComponent<Context>
   EmptyPlaceholder?: ContextAwareComponent<Context>
   ScrollElement?: ScrollElementComponent<Context>
-  onScroll?: (location: import('./dataTypes').ListScrollLocation) => void
+  onScroll?: (location: ListScrollLocation) => void
   onRenderedDataChange?: (range: Data[]) => void
   HeaderWrapper?: HeaderWrapperComponent
   StickyHeaderWrapper?: StickyHeaderWrapperComponent

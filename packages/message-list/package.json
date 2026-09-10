@@ -9,7 +9,9 @@
     "directory": "packages/message-list"
   },
   "source": "src/index.ts",
-  "files": ["dist"],
+  "files": [
+    "dist"
+  ],
   "sideEffects": false,
   "main": "dist/index.cjs",
   "module": "dist/index.mjs",

@@ -1,10 +1,11 @@
-import { Action, Cell, Signal, delayWithMicrotask } from '@virtuoso.dev/gurx'
+import { Cell, Signal, delayWithMicrotask } from '@virtuoso.dev/gurx'
 
 import { DEFAULT_ITEM_HEIGHT } from '../constants'
 import { identityOf } from '../utils/key-manager'
 import { scrollToBottom$ } from './autoscroll-system'
 
-import type { AutoscrollToBottom, ItemLocation, ScrollBehavior } from '../dataTypes'
+import type { ItemLocation, ScrollBehavior } from '../dataTypes'
+import type { NodeRef, Realm } from '@virtuoso.dev/gurx'
 
 /**
  * Data system: the authoritative item array plus every mutation that flows
@@ -24,16 +25,18 @@ export interface DataOp {
   /** Produce the next array from the previous one. */
   apply: (prev: unknown[]) => unknown[]
   /** True for operations that grow the start of the list (prepend / insert@0). */
-  prepend?: boolean
+  prepend?: boolean | undefined
   /** Purge the measured-size cache alongside this op (replace with `purgeItemSizes`). */
-  purgeSizes?: boolean
+  purgeSizes?: boolean | undefined
   /** Autoscroll intent to resolve against the pre-change scroll state. */
-  directive?: AutoscrollDirective
+  directive?: AutoscrollDirective | undefined
   /** Item identity for prepend correlation. */
-  identity?: (item: unknown) => unknown
+  identity?: ((item: unknown) => unknown) | undefined
   /** Data the directive callback should receive (added items, or the next array). */
-  changeData?: unknown[]
+  changeData?: unknown[] | undefined
 }
+
+const defaultIdentity = (item: unknown) => item
 
 /** The rendered item array. Untyped at the realm level; the component narrows. */
 export const data$ = Cell<unknown[]>([])
@@ -45,9 +48,6 @@ export const dataOp$ = Signal<DataOp>()
 const opBuffer$ = Cell<DataOp[]>([], (r) => {
   r.changeWith(opBuffer$, dataOp$, (buf, op) => [...buf, op])
 })
-
-/** Fires once per microtask after any op is queued. */
-const flush$ = Action()
 
 /**
  * Snapshot of the list state at flush time, captured before the data is mutated
@@ -65,6 +65,16 @@ interface FlushPlan {
   purge: boolean
   prepend: { addedCount: number; prevFirstIdentity: unknown } | null
   directive: AutoscrollDirective | null
+  changeData: unknown[]
+}
+
+/** Nodes the data system reads/publishes but does not own; passed in by the component. */
+export interface DataSystemContext {
+  itemCount$: NodeRef<number>
+  resetSizes$: NodeRef<void>
+  scrollTop$: NodeRef<number>
+  defaultItemSize$: NodeRef<number>
+  prependAnchor$: NodeRef<{ addedCount: number; estimate: number }>
 }
 
 function planOps(buffer: DataOp[], prevData: unknown[]): FlushPlan {
@@ -77,11 +87,17 @@ function planOps(buffer: DataOp[], prevData: unknown[]): FlushPlan {
   for (const op of buffer) {
     const before = next
     next = op.apply(before)
-    if (op.purgeSizes) purge = true
-    if (op.directive && op.directive.kind !== 'none') directive = op.directive
-    if (op.changeData) changeData = op.changeData
-    if (op.prepend) {
-      const identity = op.identity ?? identityOf
+    if (op.purgeSizes === true) {
+      purge = true
+    }
+    if (op.directive && op.directive.kind !== 'none') {
+      directive = op.directive
+    }
+    if (op.changeData) {
+      changeData = op.changeData
+    }
+    if (op.prepend === true) {
+      const identity = op.identity ?? defaultIdentity
       const addedCount = Math.max(0, next.length - before.length)
       const firstPrev = before[0]
       prepend = {
@@ -91,28 +107,20 @@ function planOps(buffer: DataOp[], prevData: unknown[]): FlushPlan {
     }
   }
 
-  return { directive, next, prepend, purge }
+  return { changeData, directive, next, prepend, purge }
 }
 
-/** Wire the data graph into a realm. Returns the flush handler for testing. */
-export function connectDataSystem(
-  realm: import('@virtuoso.dev/gurx').Realm,
-  ctx: {
-    itemCount$: Cell<number>
-    resetSizes$: Action
-    scrollTop$: Cell<number>
-    defaultItemSize$: Cell<number>
-    prependAnchor$: Signal<{ addedCount: number; estimate: number }>
-  }
-): void {
+/** Wire the data graph into a realm. */
+export function connectDataSystem(realm: Realm, ctx: DataSystemContext): void {
   realm.register(opBuffer$)
-  realm.register(flush$)
 
-  realm.link(realm.pipe(dataOp$, delayWithMicrotask()), flush$)
+  const flush$ = realm.pipe(dataOp$, delayWithMicrotask())
 
   realm.sub(flush$, () => {
     const buffer = realm.getValue(opBuffer$)
-    if (buffer.length === 0) return
+    if (buffer.length === 0) {
+      return
+    }
 
     const prevData = realm.getValue(data$)
     const prevScrollTop = realm.getValue(ctx.scrollTop$)
@@ -120,12 +128,14 @@ export function connectDataSystem(
     const plan = planOps(buffer, prevData)
 
     realm.pubIn({
-      [data$ as unknown as symbol]: plan.next,
-      [ctx.itemCount$ as unknown as symbol]: plan.next.length,
-      [opBuffer$ as unknown as symbol]: [],
+      [data$]: plan.next,
+      [ctx.itemCount$]: plan.next.length,
+      [opBuffer$]: [],
     })
 
-    if (plan.purge) realm.pub(ctx.resetSizes$)
+    if (plan.purge) {
+      realm.pub(ctx.resetSizes$)
+    }
 
     if (plan.prepend && plan.prepend.addedCount > 0) {
       realm.pub(ctx.prependAnchor$, {
@@ -137,7 +147,7 @@ export function connectDataSystem(
     if (plan.directive && plan.directive.kind !== 'none') {
       realm.pub(scrollToBottom$, {
         directive: plan.directive,
-        changeData,
+        changeData: plan.changeData,
         prevScrollTop,
       })
     }
@@ -145,8 +155,13 @@ export function connectDataSystem(
 }
 
 /** Queue an imperative/controlled data mutation. */
-export function pushDataOp(realm: import('@virtuoso.dev/gurx').Realm, op: DataOp): void {
+export function pushDataOp(realm: Realm, op: DataOp): void {
   realm.pub(dataOp$, op)
+}
+
+/** Compute the identity of an item using the active identity extractor. */
+export function itemKey(realm: Realm, item: unknown): unknown {
+  return identityOf(item, realm.getValue(itemIdentity$) ?? undefined)
 }
 
 export { DEFAULT_ITEM_HEIGHT }

@@ -25,29 +25,28 @@ export function Item<Data>({ index, offset, data, prevData, nextData }: ItemProp
 
   React.useLayoutEffect(() => {
     const el = nodeRef.current
-    if (!el || !observer) return
+    if (!el || !observer) {
+      return
+    }
     observer.observe(el)
-    return () => observer.unobserve(el)
+    return () => {
+      observer.unobserve(el)
+    }
   }, [observer, index])
 
-  if (!ItemContent) return null
+  if (!ItemContent) {
+    return null
+  }
 
   return (
     <div ref={nodeRef} data-index={index} style={{ position: 'absolute', top: offset, width: '100%' }}>
-      <TypedItemContent
-        ItemContent={ItemContent as ItemContent<Data, unknown>}
-        index={index}
-        data={data}
-        prevData={prevData}
-        nextData={nextData}
-        context={context}
-      />
+      <TypedItemContent ItemContent={ItemContent} index={index} data={data} prevData={prevData} nextData={nextData} context={context} />
     </div>
   )
 }
 
 function TypedItemContent<Data>(props: {
-  ItemContent: ItemContent<Data, unknown>
+  ItemContent: ItemContent<Data>
   index: number
   data: Data
   prevData: Data | null

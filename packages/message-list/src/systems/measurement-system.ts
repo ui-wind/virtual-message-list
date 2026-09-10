@@ -14,11 +14,14 @@ import type { Realm } from '@virtuoso.dev/gurx'
 export function createItemObserver(realm: Realm): ResizeObserver {
   return new ResizeObserver((entries) => {
     for (const entry of entries) {
-      const el = entry.target as HTMLElement & { dataset: DOMStringMap }
-      const raw = el.dataset.index
-      if (raw === undefined) continue
+      const raw = entry.target.getAttribute('data-index')
+      if (raw === null) {
+        continue
+      }
       const index = Number(raw)
-      if (Number.isNaN(index)) continue
+      if (Number.isNaN(index)) {
+        continue
+      }
       const size = entry.borderBoxSize?.[0]?.blockSize ?? entry.contentRect.height
       realm.pub(setSize$, { index, size })
     }
@@ -29,7 +32,9 @@ export function createItemObserver(realm: Realm): ResizeObserver {
 export function createViewportObserver(realm: Realm): ResizeObserver {
   return new ResizeObserver((entries) => {
     const entry = entries[0]
-    if (!entry) return
+    if (!entry) {
+      return
+    }
     const height = entry.borderBoxSize?.[0]?.blockSize ?? entry.contentRect.height
     realm.pub(viewportHeight$, height)
   })

@@ -1,12 +1,13 @@
 import { Cell } from '@virtuoso.dev/gurx'
 
-import { type AANode, findMaxKeyValue } from '../utils/a-a-tree'
+import { findMaxKeyValue } from '../utils/a-a-tree'
 import { scrollTop$ } from './dom-system'
 import { bottomOffset$, isAtBottom$ } from './is-at-bottom-system'
 import { defaultItemSize$, itemCount$, listHeight$, offsetOfIndex, offsetTree$, sizeAtIndex, sizeTree$ } from './size-system'
 import { viewportHeight$ } from './viewport-system'
 
 import type { ListScrollLocation } from '../dataTypes'
+import type { AANode } from '../utils/a-a-tree'
 
 /**
  * Scroll-location system: the single `ListScrollLocation` snapshot consumed by
@@ -28,7 +29,8 @@ function buildLocation(
   const base = {
     bottomOffset: bottom,
     isAtBottom: atBottom,
-    listOffset: -scrollTop,
+    // `-scrollTop || 0` avoids surfacing `-0` when scrollTop is exactly 0.
+    listOffset: -scrollTop || 0,
     scrollHeight,
     visibleListHeight: viewportHeight,
   }

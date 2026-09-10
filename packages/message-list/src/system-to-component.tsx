@@ -1,6 +1,9 @@
-import { useEffect, type ReactNode } from 'react'
+import { useEffect } from 'react'
+import type { ReactNode } from 'react'
 
-import { RealmContext, type Realm } from '@virtuoso.dev/gurx'
+import { RealmContext } from '@virtuoso.dev/gurx'
+
+import type { Realm } from '@virtuoso.dev/gurx'
 
 /**
  * Realm → React bridge. gurx's `RealmProvider` types `initWith`/`updateWith`

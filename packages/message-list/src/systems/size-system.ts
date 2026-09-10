@@ -1,7 +1,9 @@
 import { Action, Cell, map, Signal } from '@virtuoso.dev/gurx'
 
 import { DEFAULT_ITEM_HEIGHT } from '../constants'
-import { type AANode, find, insert, newTree } from '../utils/a-a-tree'
+import { find, insert, newTree } from '../utils/a-a-tree'
+
+import type { AANode } from '../utils/a-a-tree'
 
 /**
  * Size system: the measured size of each item, keyed by index in an AA-tree,

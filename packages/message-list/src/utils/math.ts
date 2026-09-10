@@ -7,7 +7,7 @@ export function lerp(a: number, b: number, t: number): number {
 }
 
 export function easeInOutCubic(t: number): number {
-  return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2
+  return t < 0.5 ? 4 * t * t * t : 1 - (-2 * t + 2) ** 3 / 2
 }
 
 export function offsetForAlign(
@@ -27,6 +27,7 @@ export function offsetForAlign(
       return end > scrollSize ? scrollSize - viewportSize : itemOffset
     }
     case 'start':
+    case undefined:
     default:
       return itemOffset
   }

@@ -5,6 +5,8 @@ import { scrollTop$ } from './dom-system'
 import { itemCount$, offsetTree$ } from './size-system'
 import { increaseViewportBy$, viewportHeight$ } from './viewport-system'
 
+import type { AANode } from '../utils/a-a-tree'
+
 /**
  * Range system: the inclusive index window currently rendered, expanded by
  * `increaseViewportBy$` overscan on both sides.
@@ -15,14 +17,10 @@ export interface VisibleRange {
   end: number
 }
 
-function buildRange(
-  offsets: import('../utils/a-a-tree').AANode<number>,
-  count: number,
-  scrollTop: number,
-  viewportHeight: number,
-  overscan: number
-): VisibleRange {
-  if (count === 0) return { end: 0, start: 0 }
+function buildRange(offsets: AANode<number>, count: number, scrollTop: number, viewportHeight: number, overscan: number): VisibleRange {
+  if (count === 0) {
+    return { end: 0, start: 0 }
+  }
 
   const overscannedTop = Math.max(0, scrollTop - overscan)
   const overscannedBottom = scrollTop + viewportHeight + overscan
